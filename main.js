@@ -1,13 +1,28 @@
+
+function joinRoles(roleList, roleNames) {
+    return roleList.map(role => roleNames[role]).join('/');
+}
+
 function getPersonsInfo(data) {
     const personInfo = data.persons
         .filter(person => person.registration !== null)
         .map(person => {
             const roleList = person.roles;
-            let role = 'COMPETITOR';
-            if (roleList.includes('delegate')) role = 'DELEGATE';
-            else if (roleList.includes('organizer')) role = 'ORGANIZER';
-            else if (roleList.includes('staff-dataentry') || roleList.includes('staff-other')) role = 'STAFF';
-
+            let role = '';
+            const roleNames = {
+                'delegate': 'DELEGATE',
+                'organizer': 'ORGANIZER',
+                'trainee-delegate': 'TRAINEE-DELEGATE',
+                'staff-dataentry': 'STAFF',
+                'staff-other': 'STAFF',
+                'staff-judge': 'STAFF',
+                'staff-scrambler': 'STAFF',
+                'staff-runner': 'STAFF'
+            }
+            if (roleList.length == 0) role = 'COMPETITOR';
+            else if (roleList.length == 1) role = roleNames[roleList[0]];
+            else if (roleList.length > 1) role = roleList.map(role => roleNames[role]).join('/');
+            if (role.split('/').includes('STAFF')) role = 'STAFF';
             return {
                 name: person.name,
                 wcaId: person.wcaId,
@@ -24,12 +39,14 @@ function getPersonsInfo(data) {
             room.activities.forEach(activity => {
                 allActivities[activity.id] = {
                     name: activity.name,
-                    activityCode: activity.activityCode
+                    activityCode: activity.activityCode,
+                    room: room.name
                 };
                 activity.childActivities.forEach(child => {
                     allActivities[child.id] = {
                         name: child.name,
-                        activityCode: child.activityCode
+                        activityCode: child.activityCode,
+                        room: room.name
                     };
                 });
             });
@@ -40,6 +57,7 @@ function getPersonsInfo(data) {
         person.assignments.forEach(assignment => {
             const activity = assignment.activityId;
             assignment.activityCode = allActivities[activity]?.activityCode || '';
+            assignment.room = allActivities[activity]?.room || '';
         });
     });
 
@@ -49,6 +67,8 @@ function getPersonsInfo(data) {
 }
 
 function dataToBadges({ personInfo, events }, type) {
+    const multipleRooms = document.getElementById("multiple_rooms") && document.getElementById("multiple_rooms").checked;
+
     if (type == 'csv') {
         separator = ',';
     } else if (type == 'tsv') {
@@ -75,16 +95,33 @@ function dataToBadges({ personInfo, events }, type) {
             let tasks = [];
 
             person.assignments.forEach(assignment => {
+                let task_name = '';
                 const [eventCode] = assignment.activityCode?.split('-') || [''];
                 if (eventCode === event) {
                     const round = assignment.activityCode?.split('-')[1]?.slice(1) || '';
                     if (round === '1') {
                         const detail = assignment.activityCode?.split('-')[2]?.slice(1) || '';
                         if (assignment.assignmentCode === 'competitor') {
-                            comp = detail;
+                            if (!multipleRooms) {
+                                comp = detail;
+                            } else {
+                                comp = detail + assignment.room[0].toUpperCase();
+                            }
                         }
-                        if (['staff-runner', 'staff-judge', 'staff-scrambler'].includes(assignment.assignmentCode)) {
-                            tasks.push(assignment.assignmentCode.split('-')[1][0].toUpperCase() + detail);
+                        if (assignment.assignmentCode === 'staff-dataentry') {
+                            task_name = 'E' + detail;
+                            if (multipleRooms) {
+                                task_name += '-' + assignment.room[0].toUpperCase();
+                            }
+                        }
+                        if (['staff-runner', 'staff-judge', 'staff-scrambler', 'staff-delegate'].includes(assignment.assignmentCode)) {
+                            task_name = assignment.assignmentCode.split('-')[1][0].toUpperCase() + detail;
+                            if (multipleRooms) {
+                                task_name += '-' + assignment.room[0].toUpperCase();
+                            }
+                        }
+                        if (task_name) {
+                            tasks.push(task_name);
                         }
                     }
                 }

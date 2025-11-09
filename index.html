@@ -151,6 +151,10 @@
 				<input type="checkbox" id="addPlaceholder" />
 				<label for="addPlaceholder">Add placeholder person for extras</label>
 			</div>
+			<div class="checkbox-container">
+				<input type="checkbox" id="multiple_rooms" />
+				<label for="multiple_rooms">Multiple rooms for the competition</label>
+			</div>
 
 
 			<button onclick="handleDownload('tsv')">Download TSV</button>
@@ -193,7 +197,6 @@
 				}
 			});
 		});
-		console.log("dataToBadges in window?", typeof window.dataToBadges);
 		async function fetchCompetitionData() {
 			const competitionID = document.getElementById("competitionID").value.trim();
 			const error = document.getElementById("error");
@@ -221,12 +224,11 @@
 		async function handleDownload(type) {
 			let data = await fetchCompetitionData();
 			const competitionID = document.getElementById("competitionID").value.trim();
-			console.log(data['id'], data['competitorLimit'], data['extensions']);
 			const error = document.getElementById("error");
 			error.style.display = 'none';
 			error.textContent = "";
 			const output = dataToBadges(getPersonsInfo(data), type);
-			
+
 			filename = `${competitionID}-competitor-badges-info.${type}`;
 			if (type == 'xlsx') {
 				const rows = output.trim().split("\n").map(row => row.split("\t"));
